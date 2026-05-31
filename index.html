@@ -55,7 +55,7 @@ body{background:#f0f2f5;color:#333}
 <div class="header">
 <h2>FSAE车队云端共享智能物料台账</h2>
 <div style="display:flex;gap:10px;flex-wrap:wrap">
-<span class="sync-tip" id="syncStatus">正在同步...</span>
+<span class="sync-tip">云端已同步</span>
 <button class="btn" style="width:auto" onclick="refreshCloudData()">刷新最新数据</button>
 <button class="btn" style="width:auto" onclick="logout()">退出登录</button>
 </div>
@@ -199,8 +199,8 @@ body{background:#f0f2f5;color:#333}
 </div>
 
 <script>
-// 已配置稳定的云端接口
-const CLOUD_URL = "https://v1.nocodeapi.com/test123/spotify/mDqVwKpGkXaR";
+// 对接本地自建后端（核心）
+const API_URL = "http://localhost:3000/api/materials";
 let materialList = [];
 let payImgBase64 = '';
 let invoiceImgBase64 = '';
@@ -220,27 +220,22 @@ document.getElementById('hasInvoice').addEventListener('change', function() {
 
 async function getCloudData(){
     try{
-        const res = await axios.get(CLOUD_URL, { timeout: 15000 });
-        materialList = Array.isArray(res.data.data) ? res.data.data : [];
-        document.getElementById('syncStatus').innerText = '云端已同步';
-        document.getElementById('syncStatus').style.color = '#00B42A';
+        const res = await axios.get(API_URL, {timeout: 10000});
+        materialList = Array.isArray(res.data) ? res.data : [];
         return true;
     }catch(e){
-        document.getElementById('syncStatus').innerText = '读取云端数据失败，请切换网络后重试';
-        document.getElementById('syncStatus').style.color = '#F53F3F';
+        alert("读取后端数据失败，请检查后端服务是否启动");
+        materialList = [];
         return false;
     }
 }
 
 async function saveCloudData(){
     try{
-        await axios.post(CLOUD_URL, { data: materialList }, { timeout: 15000 });
-        document.getElementById('syncStatus').innerText = '保存成功，已同步';
-        document.getElementById('syncStatus').style.color = '#00B42A';
+        await axios.post(API_URL, materialList, {timeout: 10000});
         return true;
     }catch(e){
-        document.getElementById('syncStatus').innerText = '云端同步失败，请稍后重试';
-        document.getElementById('syncStatus').style.color = '#F53F3F';
+        alert('同步后端数据失败，请检查服务');
         return false;
     }
 }
@@ -261,11 +256,9 @@ if(u==='fsae'&&p==='123456'){
 function logout(){location.reload()}
 
 async function refreshCloudData(){
-    document.getElementById('syncStatus').innerText = '正在刷新...';
-    document.getElementById('syncStatus').style.color = '#FF7D00';
     await getCloudData();
     initTable();
-    alert('已从云端刷新所有人最新数据');
+    alert('已从后端刷新最新数据');
 }
 
 function switchTab(t){
@@ -363,11 +356,9 @@ if(editId){
   materialList.push(obj);
 }
 
-document.getElementById('syncStatus').innerText = '正在同步...';
-document.getElementById('syncStatus').style.color = '#FF7D00';
 const res = await saveCloudData();
 if(res){
-    alert('保存成功，已同步给所有登录用户');
+    alert('保存成功，已同步到后端');
     resetForm();
     initTable();
     initChart();
@@ -497,13 +488,11 @@ document.getElementById('detailModal').style.display='flex';
 function closeModal(){document.getElementById('detailModal').style.display='none'}
 
 async function delItem(i){
-if(confirm('确认删除？删除后所有人云端数据都会同步删除')){
+if(confirm('确认删除？删除后所有人数据同步删除')){
 materialList.splice(i,1);
-document.getElementById('syncStatus').innerText = '正在同步...';
-document.getElementById('syncStatus').style.color = '#FF7D00';
 await saveCloudData();
 initTable();initChart();
-alert('已删除并同步到云端');
+alert('已删除并同步');
 }
 }
 
