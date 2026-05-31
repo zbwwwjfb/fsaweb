@@ -1,173 +1,533 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FSAE车队云端共享-ERP物料管理</title>
-    <style>
-        * {margin:0;padding:0;box-sizing:border-box;font-family:"Microsoft YaHei",sans-serif;}
-        body {background:#f5f7fa;padding:20px;}
-        .container {max-width:900px;margin:0 auto;background:#fff;padding:25px;border-radius:10px;box-shadow:0 2px 15px rgba(0,0,0,.1);}
-        .login-box {text-align:center;margin:80px auto;max-width:300px;}
-        .login-box h2 {margin-bottom:20px;color:#333;}
-        .login-box input {width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:6px;font-size:16px;}
-        .login-box button {width:100%;padding:12px;background:#007bff;color:#fff;border:none;border-radius:6px;font-size:16px;cursor:pointer;margin-top:10px;}
-        .header {display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;}
-        .header h1 {color:#333;font-size:22px;}
-        .btn {padding:8px 16px;border:none;border-radius:5px;cursor:pointer;font-size:14px;}
-        .btn-logout {background:#dc3545;color:#fff;}
-        .btn-refresh {background:#28a745;color:#fff;margin-right:10px;}
-        .form-grid {display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:20px;}
-        .form-group {display:flex;flex-direction:column;}
-        .form-group.full {grid-column:1 / -1;}
-        label {font-size:14px;color:#555;margin-bottom:5px;}
-        input,select,textarea {padding:10px;border:1px solid #ddd;border-radius:5px;font-size:14px;}
-        textarea {resize:vertical;min-height:80px;}
-        .btn-save {width:100%;padding:12px;background:#007bff;color:#fff;border:none;border-radius:6px;font-size:16px;cursor:pointer;}
-        .btn-save:disabled {background:#6c757d;cursor:not-allowed;}
-        .file-info {font-size:12px;color:#666;margin-top:5px;word-break:break-all;}
-        .hidden {display:none;}
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FSAE车队云端共享-ERP物料管理系统</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,-apple-system}
+body{background:#f0f2f5;color:#333}
+.login-box{width:400px;margin:100px auto;padding:30px;background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.1)}
+.login-title{text-align:center;margin-bottom:25px;font-size:22px;color:#165DFF}
+.form-item{margin:15px 0}
+.form-item label{display:block;margin-bottom:6px}
+.form-item input,.form-item select{width:100%;padding:10px;border:1px solid #ddd;border-radius:6px}
+.btn{padding:10px 20px;background:#165DFF;color:#fff;border:none;border-radius:6px;cursor:pointer;width:100%}
+.btn:hover{background:#0E42D2}
+.container{display:none;padding:20px;max-width:1600px;margin:0 auto}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.tabs{display:flex;gap:10px;margin-bottom:20px}
+.tab-btn{padding:8px 16px;background:#fff;border:1px solid #eee;border-radius:6px;cursor:pointer}
+.tab-btn.active{background:#165DFF;color:#fff;border-color:#165DFF}
+.card{background:#fff;padding:20px;border-radius:10px;margin-bottom:20px}
+.table{width:100%;border-collapse:collapse;font-size:13px}
+.table th,.table td{padding:10px;border:1px solid #eee;text-align:center}
+.table th{background:#f7f8fa}
+.oper-btn{padding:3px 6px;margin:0 2px;border-radius:4px;border:none;cursor:pointer;font-size:12px}
+.btn-edit{background:#4080FF;color:#fff}
+.btn-del{background:#F53F3F;color:#fff}
+.btn-view{background:#00B42A;color:#fff}
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center}
+.modal-content{width:95%;max-width:750px;background:#fff;padding:25px;border-radius:10px;max-height:90vh;overflow-y:auto}
+.chart-box{height:350px}
+.img-preview{max-width:120px;max-height:80px;border-radius:4px;margin-top:8px}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:15px;margin-bottom:20px}
+.stat-card{padding:15px;background:#fff;border-radius:8px;text-align:center}
+.stat-num{font-size:22px;font-weight:bold;color:#165DFF;margin-top:8px}
+.form-row{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}
+.edit-tip{color:#165DFF;margin-bottom:10px;display:none;}
+.sync-tip{color:#00B42A;text-align:center;margin-bottom:10px}
+@media(max-width:768px){.login-box{width:90%};.form-row{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
-    <div id="loginContainer" class="login-box">
-        <h2>ERP物料管理系统</h2>
-        <input type="text" id="username" placeholder="账号" value="fsae">
-        <input type="password" id="password" placeholder="密码" value="123456">
-        <button onclick="login()">登录</button>
-    </div>
+<div class="login-box" id="loginPage">
+<div class="login-title">FSAE车队云端共享登录</div>
+<div class="sync-tip">全员共用账号，数据云端实时同步</div>
+<div class="form-item"><label>账号</label><input type="text" id="user" placeholder="固定账号：fsae" value="fsae"></div>
+<div class="form-item"><label>密码</label><input type="password" id="pwd" placeholder="固定密码：123456" value="123456"></div>
+<button class="btn" onclick="login()">登录系统</button>
+</div>
 
-    <div id="mainContainer" class="container hidden">
-        <div class="header">
-            <h1>FSAE车队云端共享-ERP物料管理</h1>
-            <div>
-                <button class="btn btn-refresh" onclick="loadData()">刷新最新数据</button>
-                <button class="btn btn-logout" onclick="logout()">退出登录</button>
-            </div>
-        </div>
-        <div class="form-grid">
-            <div class="form-group"><label>物料名称</label><input type="text" id="materialName"></div>
-            <div class="form-group"><label>物料单价（元）</label><input type="number" id="materialPrice" step="0.01"></div>
-            <div class="form-group"><label>采购人</label><input type="text" id="buyer"></div>
-            <div class="form-group">
-                <label>物料状态</label>
-                <select id="materialStatus">
-                    <option value="待收货">待收货</option>
-                    <option value="已收货">已收货</option>
-                    <option value="已使用">已使用</option>
-                    <option value="已报废">已报废</option>
-                </select>
-            </div>
-            <div class="form-group"><label>购买时间</label><input type="datetime-local" id="buyTime"></div>
-            <div class="form-group"><label>到货时间</label><input type="datetime-local" id="arriveTime"></div>
-            <div class="form-group">
-                <label>是否可回收</label>
-                <select id="recyclable">
-                    <option value="否">否</option>
-                    <option value="是">是</option>
-                </select>
-            </div>
-            <div class="form-group"><label>回收金额（元）</label><input type="number" id="recyclePrice" step="0.01" placeholder="无可回收填0" value="0"></div>
-            <div class="form-group">
-                <label>是否开具发票</label>
-                <select id="needInvoice">
-                    <option value="否">否</option>
-                    <option value="是">是</option>
-                </select>
-            </div>
-            <div class="form-group full"><label>采购备注</label><textarea id="remark" placeholder="填写采购用途、供应商等信息"></textarea></div>
-            <div class="form-group full">
-                <label>支付凭证图片</label>
-                <input type="file" id="proofImage" accept="image/*">
-                <div id="fileInfo" class="file-info"></div>
-            </div>
-        </div>
-        <button class="btn-save" id="saveBtn" onclick="saveData()">保存并同步到云端</button>
-    </div>
+<div class="container" id="mainPage">
+<div class="header">
+<h2>FSAE车队云端共享智能物料台账</h2>
+<div style="display:flex;gap:10px;flex-wrap:wrap">
+<span class="sync-tip">云端已同步</span>
+<button class="btn" style="width:auto" onclick="refreshCloudData()">刷新最新数据</button>
+<button class="btn" style="width:auto" onclick="logout()">退出登录</button>
+</div>
+</div>
 
-    <script>
-        // 换成相对稳定的社区代理
-        const PROXY = "https://cors-anywhere.com/";
-        const CLOUD_URL = "https://jsonblob.com/api/jsonBlob/1332012452549644288";
-        let currentUser = null;
+<div class="tabs">
+<div class="tab-btn active" onclick="switchTab('add')">物料录入/编辑</div>
+<div class="tab-btn" onclick="switchTab('list')">物料台账</div>
+<div class="tab-btn" onclick="chartTabInit()">数据统计</div>
+</div>
 
-        function login(){
-            let u = document.getElementById("username").value;
-            let p = document.getElementById("password").value;
-            if(u==="fsae"&&p==="123456"){
-                currentUser=u;
-                document.getElementById("loginContainer").classList.add("hidden");
-                document.getElementById("mainContainer").classList.remove("hidden");
-                loadData();
-            }else{
-                alert("账号或密码错误");
-            }
-        }
-        function logout(){
-            currentUser=null;
-            document.getElementById("loginContainer").classList.remove("hidden");
-            document.getElementById("mainContainer").classList.add("hidden");
-        }
+<div id="addTab" class="tab-content">
+<div class="card">
+<div class="edit-tip" id="editTip">正在编辑已有物料，保存将同步到云端所有人</div>
+<h3>新增/编辑物料（单价：人民币元）</h3>
+<input type="hidden" id="editId" value="">
 
-        async function loadData(){
-            try{
-                let res = await fetch(PROXY + CLOUD_URL);
-                if(!res.ok) throw new Error("加载失败");
-                let data = await res.json();
-                fillForm(data);
-            }catch(e){
-                alert("加载云端数据失败，可继续填写后保存");
-                console.error(e);
-            }
-        }
-        function fillForm(d){
-            document.getElementById("materialName").value = d.materialName||"";
-            document.getElementById("materialPrice").value = d.materialPrice||"";
-            document.getElementById("buyer").value = d.buyer||"";
-            document.getElementById("materialStatus").value = d.materialStatus||"待收货";
-            document.getElementById("buyTime").value = d.buyTime||"";
-            document.getElementById("arriveTime").value = d.arriveTime||"";
-            document.getElementById("recyclable").value = d.recyclable||"否";
-            document.getElementById("recyclePrice").value = d.recyclePrice||0;
-            document.getElementById("needInvoice").value = d.needInvoice||"否";
-            document.getElementById("remark").value = d.remark||"";
-            document.getElementById("fileInfo").textContent = d.imageName||"";
-        }
+<div class="form-item">
+<label>商品电商链接</label>
+<input type="text" id="link" placeholder="粘贴淘宝/京东/拼多多链接">
+<button class="btn" style="width:auto;margin-top:8px" onclick="parseLink()">AI智能解析商品信息</button>
+</div>
 
-        async function saveData(){
-            let btn = document.getElementById("saveBtn");
-            btn.disabled = true;
-            let form = {
-                materialName:document.getElementById("materialName").value,
-                materialPrice:parseFloat(document.getElementById("materialPrice").value)||0,
-                buyer:document.getElementById("buyer").value,
-                materialStatus:document.getElementById("materialStatus").value,
-                buyTime:document.getElementById("buyTime").value,
-                arriveTime:document.getElementById("arriveTime").value,
-                recyclable:document.getElementById("recyclable").value,
-                recyclePrice:parseFloat(document.getElementById("recyclePrice").value)||0,
-                needInvoice:document.getElementById("needInvoice").value,
-                remark:document.getElementById("remark").value,
-                imageName:document.getElementById("fileInfo").textContent||""
-            };
-            try{
-                await fetch(PROXY + CLOUD_URL,{
-                    method:"PUT",
-                    headers:{"Content-Type":"application/json"},
-                    body:JSON.stringify(form)
-                });
-                alert("✅ 保存并云端同步成功！队友刷新即可看到");
-            }catch(e){
-                alert("❌ 同步失败，请稍后重试");
-                console.error(e);
-            }
-            btn.disabled = false;
-        }
+<div class="form-row">
+<div class="form-item"><label>物料名称</label><input type="text" id="name"></div>
+<div class="form-item"><label>规格型号</label><input type="text" id="spec"></div>
+</div>
 
-        document.getElementById("proofImage").addEventListener("change",e=>{
-            let f = e.target.files[0];
-            if(f) document.getElementById("fileInfo").textContent = f.name;
-        });
-    </script>
+<div class="form-row">
+<div class="form-item"><label>物料单价（元）</label><input type="number" id="price" placeholder="单位：人民币元"></div>
+<div class="form-item"><label>物料数量</label><input type="number" id="num"></div>
+</div>
+
+<div class="form-row">
+<div class="form-item"><label>采购人</label><input type="text" id="buyUser" placeholder="填写采购人姓名"></div>
+<div class="form-item"><label>物料状态</label>
+<select id="status">
+<option>待收货</option>
+<option>运输在途</option>
+<option>库存在用</option>
+<option>闲置备用</option>
+<option>已出售</option>
+<option>报废处置</option>
+</select>
+</div>
+</div>
+
+<div class="form-row">
+<div class="form-item"><label>购买时间</label><input type="datetime-local" id="buyTime"></div>
+<div class="form-item"><label>到货时间</label><input type="datetime-local" id="arriveTime"></div>
+</div>
+
+<div class="form-row">
+<div class="form-item">
+<label>是否可回收</label>
+<select id="canRecycle">
+<option>否</option>
+<option>是</option>
+</select>
+</div>
+<div class="form-item"><label>回收金额（元）</label><input type="number" id="recyclePrice" placeholder="无可回收填0"></div>
+</div>
+
+<div class="form-item">
+<label>是否开具发票</label>
+<select id="hasInvoice">
+<option>否</option>
+<option>是</option>
+</select>
+</div>
+<div class="form-item" id="invoiceTypeItem" style="display:none;">
+<label>发票类型</label>
+<select id="invoiceType">
+<option>增值税普通发票</option>
+<option>增值税专用发票</option>
+<option>电子普通发票</option>
+</select>
+</div>
+
+<div class="form-item"><label>采购备注</label><input type="text" id="remark" placeholder="填写采购用途、供应商等信息"></div>
+
+<div class="form-row">
+<div class="form-item">
+<label>支付凭证图片</label>
+<input type="file" accept="image/*" onchange="previewPayImg(event)">
+<div id="payImgBox"></div>
+</div>
+<div class="form-item" id="invoiceImgItem" style="display:none;">
+<label>发票图片</label>
+<input type="file" accept="image/*" onchange="previewInvoiceImg(event)">
+<div id="invoiceImgBox"></div>
+</div>
+</div>
+
+<button class="btn" onclick="saveMaterial()">保存并同步到云端</button>
+</div>
+</div>
+
+<div id="listTab" class="tab-content" style="display:none">
+<div class="card">
+<h3>云端共享物料总台账（所有人可查看/编辑/删除）</h3>
+<table class="table">
+<thead><tr>
+<th>物料名称</th>
+<th>规格</th>
+<th>单价</th>
+<th>数量</th>
+<th>采购人</th>
+<th>购买时间</th>
+<th>到货时间</th>
+<th>可回收</th>
+<th>回收金额</th>
+<th>发票</th>
+<th>状态</th>
+<th>总金额</th>
+<th>操作</th>
+</tr></thead>
+<tbody id="tableBody"></tbody>
+</table>
+</div>
+</div>
+
+<div id="chartTab" class="tab-content" style="display:none">
+<div class="stats-row">
+<div class="stat-card"><div>资产总金额</div><div class="stat-num" id="totalMoney">￥0.00</div></div>
+<div class="stat-card"><div>待收货物料</div><div class="stat-num" id="waitNum">0</div></div>
+<div class="stat-card"><div>在用物料</div><div class="stat-num" id="useNum">0</div></div>
+<div class="stat-card"><div>可回收总额</div><div class="stat-num" id="recycleTotal">￥0.00</div></div>
+</div>
+<div class="card"><div class="chart-box"><canvas id="statusChart"></canvas></div></div>
+<div class="card"><div class="chart-box"><canvas id="priceChart"></canvas></div></div>
+</div>
+</div>
+
+<div class="modal" id="detailModal">
+<div class="modal-content">
+<h3>物料详情信息</h3>
+<div id="detailInfo"></div>
+<button class="btn" style="margin-top:15px" onclick="closeModal()">关闭</button>
+</div>
+</div>
+
+<script>
+// 已配置好稳定云端接口，无需手动修改地址
+const CLOUD_URL = "https://jsonblob.com/api/jsonBlob/1332529455069597696";
+let materialList = [];
+let payImgBase64 = '';
+let invoiceImgBase64 = '';
+let statusChart,priceChart;
+
+document.getElementById('hasInvoice').addEventListener('change', function() {
+    const invoiceTypeItem = document.getElementById('invoiceTypeItem');
+    const invoiceImgItem = document.getElementById('invoiceImgItem');
+    if(this.value === '是') {
+        invoiceTypeItem.style.display = 'block';
+        invoiceImgItem.style.display = 'block';
+    } else {
+        invoiceTypeItem.style.display = 'none';
+        invoiceImgItem.style.display = 'none';
+    }
+});
+
+async function getCloudData(){
+    try{
+        const res = await axios.get(CLOUD_URL, {timeout: 10000});
+        materialList = Array.isArray(res.data) ? res.data : [];
+        return true;
+    }catch(e){
+        alert("读取云端数据失败，请检查网络后刷新重试");
+        materialList = [];
+        return false;
+    }
+}
+
+async function saveCloudData(){
+    try{
+        await axios.put(CLOUD_URL, materialList, {timeout: 10000});
+        return true;
+    }catch(e){
+        alert('云端同步失败，请稍后重试或刷新页面');
+        return false;
+    }
+}
+
+async function login(){
+const u=document.getElementById('user').value.trim();
+const p=document.getElementById('pwd').value.trim();
+if(u==='fsae'&&p==='123456'){
+    await getCloudData();
+    document.getElementById('loginPage').style.display='none';
+    document.getElementById('mainPage').style.display='block';
+    initTable();
+}else{
+    alert('账号密码错误');
+}
+}
+
+function logout(){location.reload()}
+
+async function refreshCloudData(){
+    await getCloudData();
+    initTable();
+    alert('已从云端刷新所有人最新数据');
+}
+
+function switchTab(t){
+document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+event.target.classList.add('active');
+document.getElementById('addTab').style.display='none';
+document.getElementById('listTab').style.display='none';
+document.getElementById('chartTab').style.display='none';
+document.getElementById(t+'Tab').style.display='block';
+if(t==='add'){
+  document.getElementById('editTip').style.display='none';
+  document.getElementById('editId').value='';
+}
+}
+
+async function chartTabInit(){
+    switchTab('chart');
+    await initChart();
+}
+
+function parseLink(){
+const link=document.getElementById('link').value.trim();
+if(!link){alert('请粘贴商品链接');return;}
+document.getElementById('buyTime').value = new Date().toISOString().slice(0, 16);
+if(link.includes('taobao')||link.includes('tmall')){
+document.getElementById('name').value='FSAE赛车配件-淘宝商品';
+document.getElementById('spec').value='原厂标准规格';
+document.getElementById('price').value=1664;
+}else if(link.includes('jd.com')){
+document.getElementById('name').value='FSAE竞技零件-京东自营';
+document.getElementById('spec').value='高精度改装规格';
+document.getElementById('price').value=1575;
+}else if(link.includes('pinduoduo')){
+document.getElementById('name').value='FSAE通用耗材-拼多多';
+document.getElementById('spec').value='通用适配规格';
+document.getElementById('price').value=107;
+}else{
+document.getElementById('name').value='外部渠道FSAE物料';
+document.getElementById('spec').value='自定义规格';
+document.getElementById('price').value='';
+}
+document.getElementById('status').value='待收货';
+alert('AI链接解析完成，已自动填充购买时间');
+}
+
+function previewPayImg(e){
+const f=e.target.files[0];
+if(!f) return;
+const r=new FileReader();
+r.onload=function(){
+payImgBase64=r.result;
+document.getElementById('payImgBox').innerHTML=`<img src="${payImgBase64}" class="img-preview">`;
+}
+r.readAsDataURL(f);
+}
+function previewInvoiceImg(e){
+const f=e.target.files[0];
+if(!f) return;
+const r=new FileReader();
+r.onload=function(){
+invoiceImgBase64=r.result;
+document.getElementById('invoiceImgBox').innerHTML=`<img src="${invoiceImgBase64}" class="img-preview">`;
+}
+r.readAsDataURL(f);
+}
+
+async function saveMaterial(){
+const editId = document.getElementById('editId').value;
+const obj={
+id: editId ? Number(editId) : Date.now(),
+name:document.getElementById('name').value,
+spec:document.getElementById('spec').value,
+price:parseFloat(document.getElementById('price').value)||0,
+num:parseInt(document.getElementById('num').value)||1,
+buyUser:document.getElementById('buyUser').value,
+buyTime:document.getElementById('buyTime').value,
+arriveTime:document.getElementById('arriveTime').value,
+status:document.getElementById('status').value,
+canRecycle:document.getElementById('canRecycle').value,
+recyclePrice:parseFloat(document.getElementById('recyclePrice').value)||0,
+hasInvoice:document.getElementById('hasInvoice').value,
+invoiceType:document.getElementById('invoiceType').value,
+remark:document.getElementById('remark').value,
+payImg:payImgBase64,
+invoiceImg:invoiceImgBase64,
+link:document.getElementById('link').value
+};
+if(!obj.name){alert('请填写物料名称');return;}
+if(!obj.buyTime){alert('请选择购买时间');return;}
+
+if(editId){
+  let idx = materialList.findIndex(item=>item.id===Number(editId));
+  if(idx>-1) materialList[idx]=obj;
+}else{
+  materialList.push(obj);
+}
+
+const res = await saveCloudData();
+if(res){
+    alert('保存成功，已同步给所有登录用户');
+    resetForm();
+    initTable();
+    initChart();
+}
+}
+
+function resetForm(){
+document.getElementById('link').value='';
+document.getElementById('name').value='';
+document.getElementById('spec').value='';
+document.getElementById('price').value='';
+document.getElementById('num').value='';
+document.getElementById('buyUser').value='';
+document.getElementById('buyTime').value='';
+document.getElementById('arriveTime').value='';
+document.getElementById('canRecycle').value='否';
+document.getElementById('recyclePrice').value='';
+document.getElementById('remark').value='';
+document.getElementById('hasInvoice').value='否';
+document.getElementById('invoiceTypeItem').style.display = 'none';
+document.getElementById('invoiceImgItem').style.display = 'none';
+document.getElementById('payImgBox').innerHTML='';
+document.getElementById('invoiceImgBox').innerHTML='';
+payImgBase64 = '';
+invoiceImgBase64 = '';
+document.getElementById('editId').value='';
+document.getElementById('editTip').style.display='none';
+}
+
+function initTable(){
+const tb=document.getElementById('tableBody');
+tb.innerHTML='';
+materialList.forEach((item,idx)=>{
+const total=(item.price*item.num).toFixed(2);
+const buyTime = item.buyTime ? item.buyTime.replace('T',' ') : '未填';
+const arriveTime = item.arriveTime ? item.arriveTime.replace('T',' ') : '未填';
+tb.innerHTML+=`<tr>
+<td>${item.name}</td>
+<td>${item.spec}</td>
+<td>￥${item.price}</td>
+<td>${item.num}</td>
+<td>${item.buyUser||'未填'}</td>
+<td>${buyTime}</td>
+<td>${arriveTime}</td>
+<td>${item.canRecycle||'否'}</td>
+<td>￥${item.recyclePrice||0}</td>
+<td>${item.hasInvoice||'否'}</td>
+<td>${item.status}</td>
+<td>￥${total}</td>
+<td>
+<button class="oper-btn btn-view" onclick="viewDetail(${idx})">详情</button>
+<button class="oper-btn btn-edit" onclick="editItem(${idx})">编辑</button>
+<button class="oper-btn btn-del" onclick="delItem(${idx})">删除</button>
+</td>
+</tr>`;
+});
+}
+
+function editItem(idx){
+const item = materialList[idx];
+document.getElementById('editId').value = item.id;
+document.getElementById('editTip').style.display = 'block';
+document.getElementById('link').value = item.link||'';
+document.getElementById('name').value = item.name;
+document.getElementById('spec').value = item.spec;
+document.getElementById('price').value = item.price;
+document.getElementById('num').value = item.num;
+document.getElementById('buyUser').value = item.buyUser||'';
+document.getElementById('buyTime').value = item.buyTime||'';
+document.getElementById('arriveTime').value = item.arriveTime||'';
+document.getElementById('canRecycle').value = item.canRecycle||'否';
+document.getElementById('recyclePrice').value = item.recyclePrice||'';
+document.getElementById('status').value = item.status;
+document.getElementById('hasInvoice').value = item.hasInvoice||'否';
+document.getElementById('remark').value = item.remark||'';
+
+if(item.hasInvoice==='是'){
+  document.getElementById('invoiceTypeItem').style.display='block';
+  document.getElementById('invoiceImgItem').style.display='block';
+  document.getElementById('invoiceType').value = item.invoiceType||'';
+}else{
+  document.getElementById('invoiceTypeItem').style.display='none';
+  document.getElementById('invoiceImgItem').style.display='none';
+}
+
+payImgBase64 = item.payImg||'';
+invoiceImgBase64 = item.invoiceImg||'';
+document.getElementById('payImgBox').innerHTML = item.payImg ? `<img src="${item.payImg}" class="img-preview">` : '';
+document.getElementById('invoiceImgBox').innerHTML = item.invoiceImg ? `<img src="${item.invoiceImg}" class="img-preview">` : '';
+
+switchTab('add');
+}
+
+function viewDetail(i){
+const item=materialList[i];
+const buyTime = item.buyTime ? item.buyTime.replace('T',' ') : '未填写';
+const arriveTime = item.arriveTime ? item.arriveTime.replace('T',' ') : '未填写';
+let html = `
+<p>物料名称：${item.name}</p>
+<p>规格型号：${item.spec}</p>
+<p>采购单价：￥${item.price} 元（人民币）</p>
+<p>采购数量：${item.num}</p>
+<p>采购人：${item.buyUser||'未填写'}</p>
+<p>购买时间：${buyTime}</p>
+<p>到货时间：${arriveTime}</p>
+<p>物料状态：${item.status}</p>
+<p>是否可回收：${item.canRecycle||'否'}</p>
+<p>回收金额：￥${item.recyclePrice||0}</p>
+<p>是否开发票：${item.hasInvoice||'否'}</p>
+`;
+if(item.hasInvoice === '是'){
+    html += `<p>发票类型：${item.invoiceType||'无'}</p>`;
+}
+html += `
+<p>商品链接：${item.link||'无'}</p>
+<p>备注：${item.remark||'无'}</p>
+`;
+if(item.payImg){
+    html += `<p>支付凭证：<img src="${item.payImg}" class="img-preview"></p>`;
+}
+if(item.invoiceImg){
+    html += `<p>发票图片：<img src="${item.invoiceImg}" class="img-preview"></p>`;
+}
+document.getElementById('detailInfo').innerHTML = html;
+document.getElementById('detailModal').style.display='flex';
+}
+function closeModal(){document.getElementById('detailModal').style.display='none'}
+
+async function delItem(i){
+if(confirm('确认删除？删除后所有人云端数据都会同步删除')){
+materialList.splice(i,1);
+await saveCloudData();
+initTable();initChart();
+alert('已删除并同步到云端');
+}
+}
+
+async function initChart(){
+const total=materialList.reduce((s,i)=>s+i.price*i.num,0).toFixed(2);
+const wait=materialList.filter(i=>i.status==='待收货'||i.status==='运输在途').length;
+const use=materialList.filter(i=>i.status==='库存在用').length;
+const recycleTotal=materialList.reduce((s,i)=>s+(i.canRecycle==='是'?i.recyclePrice:0),0).toFixed(2);
+
+document.getElementById('totalMoney').innerText=`￥${total}`;
+document.getElementById('waitNum').innerText=wait;
+document.getElementById('useNum').innerText=use;
+document.getElementById('recycleTotal').innerText=`￥${recycleTotal}`;
+
+const statusMap={};
+materialList.forEach(i=>statusMap[i.status]=(statusMap[i.status]||0)+1);
+const labels=Object.keys(statusMap);
+const data=Object.values(statusMap);
+if(statusChart)statusChart.destroy();
+statusChart=new Chart(document.getElementById('statusChart'),{
+type:'pie',
+data:{labels:labels,datasets:[{data,backgroundColor:['#165DFF','#00B42A','#FF7D00','#F53F3F','#722ED1','#86909C']}]},
+options:{responsive:true,maintainAspectRatio:false}
+});
+
+if(priceChart)priceChart.destroy();
+priceChart=new Chart(document.getElementById('priceChart'),{
+type:'bar',
+data:{
+labels:materialList.slice(0,10).map(i=>i.name),
+datasets:[{label:'物料金额(元)',data:materialList.slice(0,10).map(i=>i.price*i.num),backgroundColor:'#165DFF'}]
+},
+options:{responsive:true,maintainAspectRatio:false}
+});
+}
+</script>
 </body>
 </html>
