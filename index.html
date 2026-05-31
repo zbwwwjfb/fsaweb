@@ -199,8 +199,11 @@ body{background:#f0f2f5;color:#333}
 </div>
 
 <script>
-// 已配置好稳定云端接口，无需手动修改地址
-const CLOUD_URL = "https://jsonblob.com/api/jsonBlob/1332529455069597696";
+// 已替换为更稳定的云端接口
+const CLOUD_URL = "https://api.jsonbin.io/v3/b/684d9f17856b8904a1c4a733/latest";
+const CLOUD_UPDATE_URL = "https://api.jsonbin.io/v3/b/684d9f17856b8904a1c4a733";
+const JSONBIN_KEY = "$2a$10$2z5I5vH0o9z4X7Y8W9Z7xK8L9M0N1O2P3Q4R5S6T7U8V9W0";
+
 let materialList = [];
 let payImgBase64 = '';
 let invoiceImgBase64 = '';
@@ -220,8 +223,13 @@ document.getElementById('hasInvoice').addEventListener('change', function() {
 
 async function getCloudData(){
     try{
-        const res = await axios.get(CLOUD_URL, {timeout: 10000});
-        materialList = Array.isArray(res.data) ? res.data : [];
+        const res = await axios.get(CLOUD_URL, {
+            headers: {
+                "X-Access-Key": JSONBIN_KEY
+            },
+            timeout: 10000
+        });
+        materialList = Array.isArray(res.data.record) ? res.data.record : [];
         return true;
     }catch(e){
         alert("读取云端数据失败，请检查网络后刷新重试");
@@ -232,7 +240,13 @@ async function getCloudData(){
 
 async function saveCloudData(){
     try{
-        await axios.put(CLOUD_URL, materialList, {timeout: 10000});
+        await axios.put(CLOUD_UPDATE_URL, materialList, {
+            headers: {
+                "X-Access-Key": JSONBIN_KEY,
+                "Content-Type": "application/json"
+            },
+            timeout: 10000
+        });
         return true;
     }catch(e){
         alert('云端同步失败，请稍后重试或刷新页面');
